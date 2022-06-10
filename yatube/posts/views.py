@@ -2,13 +2,14 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from posts.models import Post, Group
+from posts.models import Post, Group, User
 from posts.forms import PostForm
+from yatube.settings import PER_PAGE
 
 
 def index(request):
     post_list = Post.objects.all()
-    paginator = Paginator(post_list, 10)
+    paginator = Paginator(post_list, PER_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     template = 'posts/index.html'
@@ -20,11 +21,11 @@ def index(request):
     return render(request, template, context)
 
 
-def groupe_post(request, slug):
+def group_post(request, slug):
     template = 'posts/group_list.html'
     group = get_object_or_404(Group, slug=slug)
     post_list = group.posts.all()
-    paginator = Paginator(post_list, 10)
+    paginator = Paginator(post_list, PER_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     context = {
@@ -36,11 +37,10 @@ def groupe_post(request, slug):
 
 def profile(request, username):
     template = 'posts/profile.html'
-    author = get_object_or_404(get_user_model(), username=username)
+    author = get_object_or_404(User, username=username)
     post_list = author.posts.all()
-    # post_list = Post.objects.filter(author=username)
     count = post_list.count()
-    paginator = Paginator(post_list, 10)
+    paginator = Paginator(post_list, PER_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     title = f'Профайл пользователя {author.get_full_name()}'
@@ -56,8 +56,8 @@ def profile(request, username):
 def post_detail(request, post_id):
     template = 'posts/post_detail.html'
     post = Post.objects.get(pk=post_id)
-    title = post.__str__()
-    user = get_object_or_404(get_user_model(), username=post.author)
+    title = str(post)
+    user = post.author
     count = user.posts.all().count()
     context = {
         'title': title,
@@ -70,37 +70,42 @@ def post_detail(request, post_id):
 
 @login_required
 def post_edit(request, post_id):
-    post = Post.objects.get(pk=post_id)
-    if post.author == request.user:
-        IS_EDIT = True
-        template = 'posts/create_post.html'
-        groups = Group.objects.all()
-        if request.method == 'POST':
-            form = PostForm(request.POST, instance=post)
-            if form.is_valid():
-                form.save()
-                return redirect('posts:post_detail', post.id)
-        form = PostForm(instance=post)
-        context = {'form': form,
-                   'is_edit': IS_EDIT,
-                   'groups': groups,
-                   'post_id': post_id}
+    post = get_object_or_404(Post, pk=post_id)
+    if post.author != request.user:
+        return redirect('posts:post_detail', post_id)
+    IS_EDIT = True
+    template = 'posts/create_post.html'
+    groups = Group.objects.all()
+    form = PostForm(instance=post)
+    context = {
+        'form': form,
+        'is_edit': IS_EDIT,
+        'post_id': post_id,
+        'groups': groups
+        }
+    if request.method != 'POST':
         return render(request, template, context)
-    return redirect('posts:post_detail', post_id)
+    form = PostForm(request.POST, instance=post)
+    if form.is_valid():
+        form.save()
+        return redirect('posts:post_detail', post.id)
 
 
 @login_required
 def post_create(request):
     template = 'posts/create_post.html'
     groups = Group.objects.all()
-    if request.method == 'POST':
-        form = PostForm(request.POST)
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user
-            post.save()
-            return redirect('posts:profile', request.user.username)
-    form = PostForm()
-    context = {'form': form,
-               'groups': groups}
-    return render(request, template, context)
+    if request.method != 'POST':
+        form = PostForm()
+        context = {
+            'form': form,
+            'groups': groups
+            }
+        return render(request, template, context)
+    form = PostForm(request.POST)
+    if form.is_valid():
+        post = form.save(commit=False)
+        post.author = request.user
+        post.save()
+        return redirect('posts:profile', request.user.username)
+

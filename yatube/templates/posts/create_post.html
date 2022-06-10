@@ -1,5 +1,12 @@
 {% extends 'base.html' %} 
-{% block title %}Новый пост{% endblock %}
+{% block title %}
+  {% if is_edit %}
+    Редактировать пост
+  {% else %}
+    Новый пост
+  {% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
   <div class="row justify-content-center">
@@ -21,18 +28,18 @@
             {% csrf_token %}
             <div class="form-group row my-3 p-3">
               <label for="id_text">
-                Текст поста                  
+                {{ form.text.label }}                             
                 <span class="required text-danger" >*</span>                  
               </label>
               <textarea name="text" cols="40" rows="10" class="form-control" required id="id_text">
               </textarea>                
               <small id="id_text-help" class="form-text text-muted">
-                Текст нового поста
+                {{ form.text.help_text }}
               </small>                  
             </div>            
             <div class="form-group row my-3 p-3">
               <label for="id_group">
-                Группа                  
+                {{ form.group.label }}                 
               </label>
               <select name="group" class="form-control" id="id_group">
                 <option value="" selected>---------</option>
@@ -41,7 +48,7 @@
                 {% endfor %}
               </select>
               <small id="id_group-help" class="form-text text-muted">
-                Группа, к которой будет относиться пост
+                {{ form.group.help_text }} 
               </small>
             </div>
             <div class="d-flex justify-content-end">

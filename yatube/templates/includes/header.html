@@ -35,7 +35,7 @@
          href="{% url 'users:logged_out' %}">Выйти</a>
       </li>
       <li>
-        Пользователь: {{ user.username }}
+        Пользователь: {{ request.user }}
       </li>
       {% else %}
       <li class="nav-item"> 

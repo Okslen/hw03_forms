@@ -1,10 +1,5 @@
 from django.contrib import admin
-from django.apps import AppConfig
 from posts.models import Post, Group
-
-
-class PostConfig(AppConfig):
-    name = 'post'
 
 
 class PostAdmin(admin.ModelAdmin):
@@ -16,7 +11,7 @@ class PostAdmin(admin.ModelAdmin):
         'group')
     search_fields = ('text',)
     list_filter = ('pub_date',)
-    list_editable = ('group', )
+    list_editable = ('group', 'author', 'group')
     empty_value_display = '-пусто-'
 
 
