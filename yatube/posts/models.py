@@ -9,16 +9,16 @@ class Group(models.Model):
         max_length=200,
         verbose_name='Название группы',
         help_text='Введите название группы'
-        )
+    )
     slug = models.SlugField(
         unique=True,
         verbose_name='Slug группы',
         help_text='Введите уникальный slug группы'
-        )
+    )
     description = models.TextField(
         verbose_name='Описание группы',
         help_text='Введите описание группы'
-        )
+    )
 
     def __str__(self):
         return self.title
@@ -31,7 +31,7 @@ class Post(models.Model):
     pub_date = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Дата публикации',
-        )
+    )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

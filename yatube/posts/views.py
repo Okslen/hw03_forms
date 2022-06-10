@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -82,7 +81,7 @@ def post_edit(request, post_id):
         'is_edit': IS_EDIT,
         'post_id': post_id,
         'groups': groups
-        }
+    }
     if request.method != 'POST':
         return render(request, template, context)
     form = PostForm(request.POST, instance=post)
@@ -100,7 +99,7 @@ def post_create(request):
         context = {
             'form': form,
             'groups': groups
-            }
+        }
         return render(request, template, context)
     form = PostForm(request.POST)
     if form.is_valid():
@@ -108,4 +107,3 @@ def post_create(request):
         post.author = request.user
         post.save()
         return redirect('posts:profile', request.user.username)
-
