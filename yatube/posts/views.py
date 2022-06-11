@@ -94,12 +94,12 @@ def post_edit(request, post_id):
 def post_create(request):
     template = 'posts/create_post.html'
     groups = Group.objects.all()
+    form = PostForm()
+    context = {
+        'form': form,
+        'groups': groups
+    }
     if request.method != 'POST':
-        form = PostForm()
-        context = {
-            'form': form,
-            'groups': groups
-        }
         return render(request, template, context)
     form = PostForm(request.POST)
     if form.is_valid():
@@ -107,3 +107,4 @@ def post_create(request):
         post.author = request.user
         post.save()
         return redirect('posts:profile', request.user.username)
+    return render(request, template, context)
