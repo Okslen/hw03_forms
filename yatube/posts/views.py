@@ -54,7 +54,7 @@ def profile(request, username):
 
 def post_detail(request, post_id):
     template = 'posts/post_detail.html'
-    post = Post.objects.get(pk=post_id)
+    post = get_object_or_404(Post, pk=post_id)
     title = str(post)
     user = post.author
     count = user.posts.all().count()
@@ -72,13 +72,13 @@ def post_edit(request, post_id):
     post = get_object_or_404(Post, pk=post_id)
     if post.author != request.user:
         return redirect('posts:post_detail', post_id)
-    IS_EDIT = True
+    is_edit = True
     template = 'posts/create_post.html'
     groups = Group.objects.all()
     form = PostForm(instance=post)
     context = {
         'form': form,
-        'is_edit': IS_EDIT,
+        'is_edit': is_edit,
         'post_id': post_id,
         'groups': groups
     }
