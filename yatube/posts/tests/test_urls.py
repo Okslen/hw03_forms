@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client
 from posts.models import Group, Post
@@ -36,15 +37,13 @@ class PostURLTest(TestCase):
             '/group/test_slug/',
             '/profile/author/',
             f'/posts/{PostURLTest.post.id}/',
-            '/not_exist_page/',
         )
         for URL_name in URL_names:
             with self.subTest(URL_name=URL_name):
                 response = self.guest_client.get(URL_name)
-                if URL_name != '/not_exist_page/':
-                    self.assertEqual(response.status_code, 200)
-                else:
-                    self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.status_code, HTTPStatus.OK)
+        response = self.guest_client.get('/not_exist_page/')
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_url_redirect_not_authorized_user(self):
         """Страница доступна автору и перенаправит других пользователей"""
@@ -57,7 +56,7 @@ class PostURLTest(TestCase):
         for URL_name, redirect_name in URL_names.items():
             with self.subTest(URL_name=URL_name):
                 response = self.author_client.get(URL_name)
-                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.status_code, HTTPStatus.OK)
                 response_follow = self.guest_client.get(URL_name, follow=True)
                 self.assertRedirects(response_follow, redirect_name)
         response = self.authorized_client.get(
