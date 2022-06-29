@@ -10,7 +10,6 @@ from yatube.settings import PER_PAGE
 
 
 User = get_user_model()
-test_posts_count = 13
 
 
 class PostPagesTest(TestCase):
@@ -23,7 +22,8 @@ class PostPagesTest(TestCase):
             slug='test_slug',
             description='Тестовое описание',
         )
-        for i in range(test_posts_count):
+        cls.test_posts_count = 13
+        for i in range(cls.test_posts_count):
             cls.post = Post.objects.create(
                 author=PostPagesTest.author,
                 group=PostPagesTest.group,
@@ -40,7 +40,7 @@ class PostPagesTest(TestCase):
         self.author_client.force_login(self.author)
 
     def test_views_template_and_forms(self):
-        """URL-адрес использует соответствующий шаблон, поле формы"""
+        """URL-адрес использует соответствующий шаблон"""
         post = PostPagesTest.post
         templates_page_names = {
             reverse('posts:index'): 'posts/index.html',
@@ -62,7 +62,16 @@ class PostPagesTest(TestCase):
                 kwargs={'post_id': f'{post.id}'}
             ): 'posts/create_post.html',
         }
-        views_context = {
+
+        for reverse_name, template in templates_page_names.items():
+            with self.subTest(reverse=reverse):
+                response = self.author_client.get(reverse_name)
+                self.assertTemplateUsed(response, template)
+
+    def test_views_context(self):
+        """Шаблон сформирован с правильным контекстом"""
+        id = PostPagesTest.post.id
+        views_context_exp = {
             'title': str,
             'page_obj': Page,
             'group': Group,
@@ -75,59 +84,77 @@ class PostPagesTest(TestCase):
             'post_id': int,
             'groups': QuerySet
         }
+        views_context = {
+            '/': ('title', 'page_obj'),
+            '/group/test_slug/': ('page_obj', 'group'),
+            '/profile/author/': ('title', 'count', 'page_obj', 'author'),
+            f'/posts/{id}/': ('title', 'count', 'post', 'user'),
+            f'/posts/{id}/edit/': ('form', 'is_edit', 'post_id', 'groups'),
+            '/create/': ('form', 'groups')
+        }
         form_fields = {
-            'pub_date': forms.fields.DateTimeField,
             'text': forms.fields.CharField,
-            'title': forms.fields.CharField,
-            'slug': forms.fields.SlugField,
-            'description': forms.fields.CharField,
-        }
-        for reverse_name, template in templates_page_names.items():
-            with self.subTest(reverse=reverse):
-                response = self.author_client.get(reverse_name)
-                self.assertTemplateUsed(response, template)
-                for value, expected in views_context.items():
-                    with self.subTest(value=value):
-                        context_value = response.context.get(value)
-                        if context_value:
-                            self.assertIsInstance(context_value, expected)
-                        if context_value == 'form':
-                            for form_field, exp_field in form_fields:
-                                with self.subTest(form_field=form_field):
-                                    form = context_value.fields.get(form_field)
-                                    self.assertIsInstance(form, exp_field)
-
-    def test_paginator_views(self):
-        post = PostPagesTest.post
-
-        templates_page_names = {
-            reverse('posts:index'): 'posts/index.html',
-            reverse(
-                'posts:group_list',
-                kwargs={"slug": f'{post.group.slug}'}
-            ): 'posts/group_list.html',
-            reverse(
-                'posts:profile',
-                kwargs={'username': f'{post.author.username}'}
-            ): 'posts/profile.html',
+            'group': forms.models.ModelChoiceField,
         }
 
-        for reverse_name, template in templates_page_names.items():
-            with self.subTest(reverse=reverse):
-                response = self.author_client.get(reverse_name + '?page=2')
-                self.assertEqual(
-                    len(response.context['page_obj']),
-                    test_posts_count % PER_PAGE,
-                )
-                response = self.author_client.get(reverse_name)
-                page_obj = response.context['page_obj']
-                self.assertEqual(len(page_obj), PER_PAGE)
-                post = page_obj[0]
-                post_values = {
-                    post.text: 'Тестовый пост',
-                    post.group: PostPagesTest.group,
-                    post.author: PostPagesTest.author,
-                }
-                for post_value, expected in post_values.items():
-                    with self.subTest(post_value=post_value):
-                        self.assertEqual(post_value, expected)
+        def form_test(form):
+            for value, expected in form_fields.items():
+                with self.subTest(value=value):
+                    form_field = form.fields.get(value)
+                    self.assertIsInstance(form_field, expected)
+
+        def post_context_test(post):
+            post_values = {
+                post.text: 'Тестовый пост',
+                post.group: PostPagesTest.group,
+                post.author: PostPagesTest.author,
+            }
+            for post_value, expected in post_values.items():
+                with self.subTest(post_value=post_value):
+                    self.assertEqual(post_value, expected)
+
+        def paginator_test(address, page_obj):
+            self.assertEqual(len(page_obj), PER_PAGE)
+            response = self.author_client.get(address + '?page=2')
+            self.assertEqual(
+                len(response.context['page_obj']),
+                PostPagesTest.test_posts_count % PER_PAGE,
+            )
+            post_context_test(page_obj[0])
+
+        for address, context_items in views_context.items():
+            response = self.author_client.get(address)
+            with self.subTest(context_items=context_items):
+                for item in context_items:
+                    item_value = response.context.get(item)
+                    expected_value = views_context_exp.get(item)
+                    self.assertIsInstance(item_value, expected_value)
+                    if item == 'form':
+                        form_test(item_value)
+                    if item == 'post':
+                        post_context_test(item_value)
+                    if item == 'post_obj':
+                        paginator_test(address, item_value)
+
+    def test_post_create(self):
+        group2 = Group.objects.create(
+            title='Тестовая группа 2',
+            slug='test_slug_2',
+            description='Тестовое описание 2',
+        )
+        post = Post.objects.create(
+            author=PostPagesTest.author,
+            group=group2,
+            text='Тестовый пост 2'
+        )
+        addresses = ('/', '/group/test_slug_2/', '/profile/author/')
+        for address in addresses:
+            with self.subTest(address=address):
+                response = self.author_client.get(address)
+                page_obj = response.context.get('page_obj')
+                self.assertIn(post, page_obj)
+        response = self.author_client.get('/group/test_slug/')
+        page_obj = response.context.get('page_obj')
+        self.assertNotIn(post, page_obj)
+        page_obj = PostPagesTest.group.posts.all()
+        self.assertNotIn(post, page_obj)

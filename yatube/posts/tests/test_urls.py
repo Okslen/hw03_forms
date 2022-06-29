@@ -65,17 +65,17 @@ class PostURLTest(TestCase):
         )
         self.assertRedirects(response, f'/posts/{id}/')
 
-        def test_urls_use_correct_templates(self):
-            id = PostURLTest.post.id
-            URL_names = {
-                '/': 'posts/index.html',
-                '/group/test_slug/': 'posts/group_list.html',
-                '/profile/author/': 'posts/profile.html',
-                f'/posts/{id}/': 'posts/post_detail.html',
-                f'/posts/{id}/edit/': 'posts/create_post.html',
-                '/create/': 'posts/create_post.html'
-            }
-            for address, template in URL_names.items():
-                with self.subTest(template=template):
-                    response = self.author_client.get(address)
-                    self.assertTemplateUsed(response, template)
+    def test_urls_use_correct_templates(self):
+        id = PostURLTest.post.id
+        URL_names = {
+            '/': 'posts/index.html',
+            '/group/test_slug/': 'posts/group_list.html',
+            '/profile/author/': 'posts/profile.html',
+            f'/posts/{id}/': 'posts/post_detail.html',
+            f'/posts/{id}/edit/': 'posts/create_post.html',
+            '/create/': 'posts/create_post.html'
+        }
+        for address, template in URL_names.items():
+            with self.subTest(template=template):
+                response = self.author_client.get(address)
+                self.assertTemplateUsed(response, template)
